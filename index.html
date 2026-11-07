@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Archery Lab – Timer</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:dark;--bg:#0b0e12;--panel:#141922;--line:#232b38;--text:#cfd8ea;--muted:#8794ab;--amber:#ffb81c;--orange:#ff9f1a;--cur:#ffb81c;--size:26;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+:root[data-theme=light]{color-scheme:light;--bg:#f4f6fa;--panel:#ffffff;--line:#d9dfea;--text:#1d2635;--muted:#5d6b82;--amber:#c97a00}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,Arial,sans-serif}
+#app{height:100%;display:flex;flex-direction:column;position:relative;background-color:var(--bgc,var(--bg));
+background-image:linear-gradient(color-mix(in srgb,var(--text) 7%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--text) 7%,transparent) 1px,transparent 1px);background-size:44px 44px}
+header{padding:18px 20px 0;text-align:center}
+h1{margin:0;font-size:clamp(28px,5vw,48px);font-weight:800;background:linear-gradient(180deg,#ffc928,#ff9f1a);-webkit-background-clip:text;background-clip:text;color:transparent}
+main{overflow:hidden;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 16px;min-height:0;text-align:center;width:100%}
+#round{min-height:1.4em;color:var(--muted);font-size:clamp(14px,2vw,20px)}
+#label{min-height:1.2em;font-size:calc(var(--size)*.22vmin + 14px);font-weight:700;color:var(--cur);letter-spacing:.12em;margin-bottom:.2em}
+#time{font-size:min(calc(var(--size)*1vmin + var(--size)*.6vw),calc(var(--size)*1.6vh));font-weight:800;line-height:1.05;color:var(--cur);font-variant-numeric:tabular-nums;white-space:nowrap;max-width:100%}
+#time.word{font-size:min(calc(var(--size)*.7vmin + var(--size)*.4vw),calc(var(--size)*1vh))}
+#time.flash{animation:fl .5s steps(2) infinite}
+@keyframes fl{50%{opacity:.15}}
+@media (prefers-reduced-motion:reduce){#time.flash{animation:none}}
+#bar{display:flex;margin-top:2vh;border-radius:99px;background:color-mix(in srgb,var(--text) 14%,transparent);overflow:hidden}
+#bar i{display:block;height:100%;width:100%}
+.ctrl{position:relative;z-index:3;display:flex;gap:10px;justify-content:center;padding:8px 16px 14px;flex-wrap:wrap}
+button{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--panel);color:var(--text);padding:12px 20px;border-radius:12px;cursor:pointer}
+button:hover{border-color:var(--orange)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+button.go{background:linear-gradient(180deg,#ffc928,#ff9f1a);color:#1a1200;border-color:transparent;min-width:130px;font-size:1.1em}
+footer{text-align:center;padding:4px 0 16px;font-size:clamp(18px,3vw,28px);font-weight:700}
+#panel{position:absolute;top:0;right:0;bottom:0;width:min(420px,100%);background:var(--panel);border-left:1px solid var(--line);padding:18px;overflow-y:auto;transform:translateX(100%);visibility:hidden;transition:transform .25s,visibility .25s;z-index:5}
+#panel.open{transform:none;visibility:visible}
+#panel h2{margin:0 0 4px;font-size:18px;color:var(--amber)}
+#panel h3{margin:18px 0 8px;font-size:14px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line);padding-bottom:4px}
+.row{display:grid;grid-template-columns:1fr 150px;gap:8px;align-items:center;margin:7px 0;font-size:14px}
+.row input,.row select{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px 8px;font:inherit}
+.row input[type=color]{padding:2px;height:34px}
+.row input[type=checkbox]{width:22px;height:22px;justify-self:end}
+.row input[type=range]{padding:0}
+.hint{font-size:12px;color:var(--muted)}
+.fs header,.fs footer,.fs #panel{display:none}
+.fs.hidectl:not(.ctlshow) .ctrl{opacity:0;pointer-events:none}
+.fs.hidectl:not(.ctlshow){cursor:none}
+.ctrl{transition:opacity .3s}
+#time,#label{transition:color .4s}
+#disp{position:relative;display:grid;place-items:center;max-width:100%}
+#ring{position:absolute;inset:0;width:100%;height:100%;display:none;transform:rotate(-90deg)}
+#ringp{stroke-dasharray:100;transition:stroke .4s}
+.ringmode #disp{width:min(56vh,92vw);aspect-ratio:1}
+.ringmode #ring{display:block}
+.ringmode #time{font-size:calc(var(--size)*.5vmin + var(--size)*.22vw)}
+.ringmode #time.word{font-size:calc(var(--size)*.32vmin + var(--size)*.16vw)}
+#time.pulse{animation:pu 1s ease-in-out infinite}
+@keyframes pu{50%{transform:scale(1.05)}}
+#app.endflash::after{content:"";position:absolute;inset:0;background:var(--cur);pointer-events:none;opacity:0;animation:ef .6s steps(2) infinite}
+@keyframes ef{50%{opacity:.22}}
+@media (prefers-reduced-motion:reduce){#time.pulse,#app.endflash::after{animation:none}}
+#lights{display:none;gap:2vmin;margin:1vh 0}
+#lights b{width:5vmin;height:5vmin;min-width:22px;min-height:22px;border-radius:50%;background:color-mix(in srgb,var(--text) 15%,transparent)}
+#lights b.on.r{background:#e53935;box-shadow:0 0 24px #e53935}
+#lights b.on.y{background:#fdd835;box-shadow:0 0 24px #fdd835}
+#lights b.on.g{background:#43a047;box-shadow:0 0 24px #43a047}
+#group{font-weight:800;font-size:clamp(20px,4vw,40px);color:var(--cur);letter-spacing:.2em;min-height:1.2em}
+#plan{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:2vh;font-size:clamp(12px,1.6vw,16px);color:var(--muted)}
+#plan span{padding:4px 12px;border-radius:99px;border:1px solid var(--line)}
+#plan span.on{color:#1a1200;background:var(--cur);border-color:transparent;font-weight:700}
+.brand{display:flex;gap:12px;align-items:center;justify-content:center}
+.brand svg{width:clamp(36px,6vw,56px);height:auto;flex:none}
+.lay-display header,.lay-display footer,.lay-display #plan{display:none}
+@media (max-height:520px){header,footer,#plan{display:none}.ctrl{padding:4px 8px 8px;gap:6px}button{padding:8px 14px}#label{margin:0}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header><div class="brand"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffc928"/><stop offset="1" stop-color="#ff9f1a"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="url(#lg)"/><g fill="none" stroke="#1a1200" stroke-width="3.5"><circle cx="32" cy="32" r="20"/><circle cx="32" cy="32" r="11"/></g><circle cx="32" cy="32" r="4" fill="#1a1200"/><path d="M32 32 52 12M52 12v9M52 12h-9" stroke="#1a1200" stroke-width="3.5" stroke-linecap="round" fill="none"/></svg><h1>Archery Lab</h1></div></header>
+  <main>
+    <div id="round"></div>
+    <div id="group"></div>
+    <div id="lights"><b class="r"></b><b class="y"></b><b class="g"></b></div>
+    <div id="label"></div>
+    <div id="disp"><svg id="ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-opacity=".14" stroke-width="3"/><circle id="ringp" cx="50" cy="50" r="46" fill="none" stroke-linecap="round" stroke-width="3" pathLength="100"/></svg><div id="time">2:00</div></div>
+    <div id="bar"><i></i></div>
+    <div id="plan"></div>
+  </main>
+  <div class="ctrl">
+    <button class="go" id="bGo"></button>
+    <button id="bReset" data-i="reset"></button>
+    <button id="bM10">−10″</button><button id="bP10">+10″</button><button id="bRst" title="Restart phase">↻</button>
+    <button id="bFs" data-i="fs"></button>
+    <button id="bSet" data-i="set"></button>
+    <button id="bLang" title="Language / Γλώσσα">EL / EN</button>
+    <button id="bTheme" title="Dark / Light">◐</button>
+  </div>
+  <footer>Timer</footer>
+
+  <aside id="panel">
+    <h2 data-i="settings"></h2>
+    <div class="hint" data-i="hint"></div>
+    <h3 data-i="hGen"></h3>
+    <label class="row"><span data-i="lang"></span><select id="lang"><option value="el">Ελληνικά</option><option value="en">English</option></select></label>
+    <label class="row"><span data-i="theme"></span><select id="theme"><option value="dark" data-i="dark"></option><option value="light" data-i="light"></option><option value="auto" data-i="auto"></option></select></label>
+    <h3 data-i="hPre"></h3>
+    <label class="row"><span data-i="preSel"></span><select id="preSel"></select></label>
+    <label class="row"><span data-i="preName"></span><input type="text" id="preName"></label>
+    <div class="ctrl"><button id="preSave" data-i="pSave"></button><button id="preLoad" data-i="pLoad"></button><button id="preDel" data-i="pDel"></button><button id="preExp" data-i="pExp"></button><button id="preImp" data-i="pImp"></button><input type="file" id="preFile" accept=".json" hidden></div>
+    <h3 data-i="hTimes"></h3>
+    <label class="row"><span data-i="prep"></span><input type="number" min="0" id="prep"></label>
+    <label class="row"><span data-i="run"></span><input type="number" min="1" id="run"></label>
+    <label class="row"><span data-i="warn"></span><input type="number" min="0" id="warn"></label>
+    <label class="row"><span data-i="endHold"></span><input type="number" min="0" id="endHold"></label>
+    <label class="row"><span data-i="rounds"></span><input type="number" min="1" id="rounds"></label>
+    <h3 data-i="hTexts"></h3>
+    <label class="row"><span data-i="tPrep"></span><input type="text" id="lPrep"></label>
+    <label class="row"><span data-i="tRun"></span><input type="text" id="lRun"></label>
+    <label class="row"><span data-i="tWarn"></span><input type="text" id="lWarn"></label>
+    <label class="row"><span data-i="tEnd"></span><input type="text" id="lEnd"></label>
+    <label class="row"><span data-i="fontText"></span><select id="fontText"></select></label>
+    <h3 data-i="hView"></h3>
+    <label class="row"><span data-i="cPrep"></span><input type="color" id="cPrep"></label>
+    <label class="row"><span data-i="cRun"></span><input type="color" id="cRun"></label>
+    <label class="row"><span data-i="cWarn"></span><input type="color" id="cWarn"></label>
+    <label class="row"><span data-i="cEnd"></span><input type="color" id="cEnd"></label>
+    <label class="row"><span data-i="cBg"></span><input type="color" id="cBg"></label>
+    <label class="row"><span data-i="font"></span><select id="font"></select></label>
+    <label class="row"><span data-i="size"></span><input type="range" min="12" max="40" id="size"></label>
+    <label class="row"><span data-i="showMs"></span><input type="checkbox" id="showMs"></label>
+    <label class="row"><span data-i="hideCtl"></span><input type="checkbox" id="hideCtl"></label>
+    <label class="row"><span data-i="fsStart"></span><input type="checkbox" id="fsStart"></label>
+    <label class="row"><span data-i="palette"></span><select id="palette"><option value="" data-i="palPick"></option><option value="arch" data-i="palArch"></option><option value="contrast" data-i="palContrast"></option><option value="sun" data-i="palSun"></option></select></label>
+    <label class="row"><span data-i="layout"></span><select id="layout"><option value="control" data-i="layCtl"></option><option value="display" data-i="layDisp"></option></select></label>
+    <label class="row"><span data-i="prog"></span><select id="prog"><option value="bar" data-i="prBar"></option><option value="ring" data-i="prRing"></option><option value="both" data-i="prBoth"></option><option value="none" data-i="prNone"></option></select></label>
+    <label class="row"><span data-i="pulse"></span><input type="checkbox" id="pulse"></label>
+    <label class="row"><span data-i="endFlash"></span><input type="checkbox" id="endFlash"></label>
+    <h3 data-i="hBar"></h3>
+    <label class="row"><span data-i="barDir"></span><select id="barDir"><option value="sl" data-i="dSl"></option><option value="sr" data-i="dSr"></option><option value="sc" data-i="dSc"></option><option value="fl" data-i="dFl"></option><option value="fr" data-i="dFr"></option></select></label>
+    <label class="row"><span data-i="barH"></span><input type="range" min="0" max="80" id="barH"></label>
+    <label class="row"><span data-i="barW"></span><input type="range" min="20" max="100" id="barW"></label>
+    <label class="row"><span data-i="barAuto"></span><input type="checkbox" id="barAuto"></label>
+    <label class="row"><span data-i="cBar"></span><input type="color" id="cBar"></label>
+    <h3 data-i="hRace"></h3>
+    <label class="row"><span data-i="abcd"></span><input type="checkbox" id="abcd"></label>
+    <label class="row"><span data-i="light"></span><select id="light"><option value="off" data-i="lOff"></option><option value="circles" data-i="lCirc"></option><option value="bg" data-i="lBg"></option></select></label>
+    <label class="row"><span data-i="wake"></span><input type="checkbox" id="wake"></label>
+    <h3 data-i="hSound"></h3>
+    <label class="row"><span data-i="beep"></span><input type="checkbox" id="beep"></label>
+    <label class="row"><span data-i="vol"></span><input type="range" min="0" max="100" id="vol"></label>
+    <label class="row"><span data-i="tickWarn"></span><input type="checkbox" id="tickWarn"></label>
+    <label class="row"><span data-i="flash"></span><input type="checkbox" id="flash"></label>
+    <label class="row"><span data-i="snd"></span><select id="snd"><option value="beep" data-i="sBeep"></option><option value="whistle" data-i="sWhistle"></option><option value="horn" data-i="sHorn"></option><option value="bell" data-i="sBell"></option></select></label>
+    <label class="row"><span data-i="nPrep"></span><input type="number" min="0" max="5" id="nPrep"></label>
+    <label class="row"><span data-i="nRun"></span><input type="number" min="0" max="5" id="nRun"></label>
+    <label class="row"><span data-i="nEnd"></span><input type="number" min="0" max="5" id="nEnd"></label>
+    <label class="row"><span data-i="voice"></span><input type="checkbox" id="voice"></label>
+    <label class="row"><span data-i="voiceN"></span><input type="number" min="1" max="10" id="voiceN"></label>
+    <div class="ctrl"><button id="bDef" data-i="def"></button><button id="bClose" data-i="close"></button></div>
+  </aside>
+</div>
+
+<script>
+const T={
+el:{go:'Έναρξη',pause:'Παύση',resume:'Συνέχεια',reset:'Επαναφορά',fs:'⛶ Οθόνη',set:'⚙ Ρυθμίσεις',settings:'Ρυθμίσεις',
+hint:'Χρόνοι σε δευτερόλεπτα. Αποθηκεύονται αυτόματα. Πλήκτρα: Space έναρξη/παύση, R επαναφορά, F πλήρης οθόνη, S ρυθμίσεις. Σε πλήρη οθόνη τα κουμπιά εμφανίζονται όταν κινείτε το ποντίκι ή αγγίζετε την οθόνη.',
+hGen:'Γενικά',lang:'Γλώσσα',theme:'Θέμα',dark:'Σκούρο (dark)',light:'Φωτεινό',auto:'Αυτόματο (συσκευής)',
+hTimes:'Χρόνοι',prep:'Χρόνος προετοιμασίας',run:'Χρόνος αντίστροφης μέτρησης',warn:'Προειδοποίηση λήξης (τελευταία δευτ.)',endHold:'Διάρκεια λήξης (0 = μέχρι επαναφορά)',rounds:'Επαναλήψεις',
+hTexts:'Κείμενα',tPrep:'Προετοιμασία',tRun:'Μέτρηση',tWarn:'Προειδοποίηση',tEnd:'Λήξη',fontText:'Γραμματοσειρά κειμένων',
+hView:'Εμφάνιση',cPrep:'Χρώμα προετοιμασίας',cRun:'Χρώμα μέτρησης',cWarn:'Χρώμα προειδοποίησης',cEnd:'Χρώμα λήξης',cBg:'Χρώμα φόντου',font:'Γραμματοσειρά ψηφίων',size:'Μέγεθος ψηφίων',showMs:'Δέκατα δευτερολέπτου',hideCtl:'Απόκρυψη κουμπιών σε πλήρη οθόνη',fsStart:'Αυτόματη πλήρης οθόνη στην έναρξη',
+hBar:'Μπάρα χρόνου',barDir:'Κατεύθυνση',dSl:'Μειώνεται προς τα αριστερά',dSr:'Μειώνεται προς τα δεξιά',dSc:'Μειώνεται προς το κέντρο',dFl:'Γεμίζει από αριστερά',dFr:'Γεμίζει από δεξιά',barH:'Ύψος (0 = κρυφή)',barW:'Πλάτος (%)',barAuto:'Χρώμα φάσης αυτόματα',cBar:'Χρώμα μπάρας',
+hSound:'Ήχος',beep:'Ηχητικά σήματα',vol:'Ένταση',tickWarn:'Παλμός κάθε δευτ. στην προειδοποίηση',flash:'Αναβόσβημα στη λήξη',def:'Προεπιλογές',close:'Κλείσιμο',
+ready:'ΕΤΟΙΜΟΣ',paused:'ΠΑΥΣΗ',round:'Σειρά',lPrep:'ΕΤΟΙΜΑΣΙΑ',lRun:'ΜΕΤΡΗΣΗ',lWarn:'ΠΡΟΣΟΧΗ',lEnd:'ΛΗΞΗ',
+hPre:'Προφίλ (presets)',preSel:'Αποθηκευμένα',preName:'Όνομα προφίλ',pSave:'Αποθήκευση',pLoad:'Φόρτωση',pDel:'Διαγραφή',pExp:'Εξαγωγή',pImp:'Εισαγωγή',
+palette:'Έτοιμο θέμα χρωμάτων',palPick:'Επιλέξτε…',palArch:'Archery Lab',palContrast:'Υψηλή αντίθεση',palSun:'Ηλιακό φως (εξωτερικός χώρος)',layout:'Διάταξη',layCtl:'Έλεγχος (με φάσεις)',layDisp:'Προβολή (μόνο ψηφία)',
+prog:'Ένδειξη προόδου',prBar:'Μπάρα',prRing:'Δακτύλιος',prBoth:'Μπάρα και δακτύλιος',prNone:'Καμία',pulse:'Παλμός ψηφίων στα τελευταία 10″',endFlash:'Αναβόσβημα φόντου στη λήξη',
+hRace:'Αγώνας',abcd:'Σειρές AB / CD',light:'Σηματοδότης',lOff:'Κανένας',lCirc:'Τρεις κύκλοι',lBg:'Χρώμα φόντου',wake:'Να μην κλειδώνει η οθόνη',
+snd:'Τύπος ήχου',sBeep:'Μπιπ',sWhistle:'Σφυρίχτρα',sHorn:'Κόρνα',sBell:'Καμπάνα',nPrep:'Σήματα στην προετοιμασία',nRun:'Σήματα στην έναρξη μέτρησης',nEnd:'Σήματα στη λήξη',voice:'Φωνητική αντίστροφη μέτρηση',voiceN:'Φωνή στα τελευταία (δευτ.)'},
+en:{go:'Start',pause:'Pause',resume:'Resume',reset:'Reset',fs:'⛶ Fullscreen',set:'⚙ Settings',settings:'Settings',
+hint:'Times are in seconds. Saved automatically. Keys: Space start/pause, R reset, F fullscreen, S settings. In fullscreen the buttons appear when you move the mouse or touch the screen.',
+hGen:'General',lang:'Language',theme:'Theme',dark:'Dark',light:'Light',auto:'Auto (device)',
+hTimes:'Times',prep:'Preparation time',run:'Countdown time',warn:'End warning (last seconds)',endHold:'End duration (0 = until reset)',rounds:'Repetitions',
+hTexts:'Texts',tPrep:'Preparation',tRun:'Countdown',tWarn:'Warning',tEnd:'End',fontText:'Text font',
+hView:'Display',cPrep:'Preparation color',cRun:'Countdown color',cWarn:'Warning color',cEnd:'End color',cBg:'Background color',font:'Digits font',size:'Digits size',showMs:'Tenths of a second',hideCtl:'Hide buttons in fullscreen',fsStart:'Auto fullscreen on start',
+hBar:'Time bar',barDir:'Direction',dSl:'Shrinks to the left',dSr:'Shrinks to the right',dSc:'Shrinks to the center',dFl:'Fills from the left',dFr:'Fills from the right',barH:'Height (0 = hidden)',barW:'Width (%)',barAuto:'Use phase color',cBar:'Bar color',
+hSound:'Sound',beep:'Beeps',vol:'Volume',tickWarn:'Tick every second in warning',flash:'Flash at the end',def:'Defaults',close:'Close',
+ready:'READY',paused:'PAUSED',round:'Round',lPrep:'GET READY',lRun:'COUNTDOWN',lWarn:'WARNING',lEnd:'TIME UP',
+hPre:'Presets',preSel:'Saved',preName:'Preset name',pSave:'Save',pLoad:'Load',pDel:'Delete',pExp:'Export',pImp:'Import',
+palette:'Color theme preset',palPick:'Choose…',palArch:'Archery Lab',palContrast:'High contrast',palSun:'Sunlight (outdoor)',layout:'Layout',layCtl:'Control (with phases)',layDisp:'Display (digits only)',
+prog:'Progress indicator',prBar:'Bar',prRing:'Ring',prBoth:'Bar and ring',prNone:'None',pulse:'Pulse digits in the last 10″',endFlash:'Flash background at the end',
+hRace:'Competition',abcd:'AB / CD rotation',light:'Traffic light',lOff:'Off',lCirc:'Three circles',lBg:'Background tint',wake:'Keep screen awake',
+snd:'Sound type',sBeep:'Beep',sWhistle:'Whistle',sHorn:'Horn',sBell:'Bell',nPrep:'Signals at preparation',nRun:'Signals at countdown start',nEnd:'Signals at the end',voice:'Voice countdown',voiceN:'Voice in the last (sec)'}};
+const DT={dark:{cPrep:'#cfd8ea',cRun:'#ffb81c',cWarn:'#ff7a1a',cEnd:'#ff3b3b',cBg:'#0b0e12'},
+light:{cPrep:'#3d5a8a',cRun:'#e08a00',cWarn:'#e05a0c',cEnd:'#d42a2a',cBg:'#f4f6fa'}};
+const FONTS=[["'Segoe UI',system-ui,Arial,sans-serif",'Segoe UI'],["'Arial Black',Impact,sans-serif",'Arial Black'],["Impact,'Arial Narrow Bold',sans-serif",'Impact'],
+["'Courier New',Consolas,monospace",'Courier / Mono'],["'Lucida Console',Consolas,monospace",'Lucida Console'],["Georgia,'Times New Roman',serif",'Georgia'],
+["Verdana,Geneva,sans-serif",'Verdana'],["'Trebuchet MS',sans-serif",'Trebuchet'],["'Palatino Linotype',Palatino,serif",'Palatino'],["'Gill Sans','Gill Sans MT',Calibri,sans-serif",'Gill Sans / Calibri'],["'Orbitron','Segoe UI',sans-serif",'Orbitron (digital)'],["'Share Tech Mono','Courier New',monospace",'Share Tech Mono']];
+const D={lang:'el',theme:'dark',eff:'dark',prep:10,run:120,warn:30,endHold:5,rounds:1,...DT.dark,
+lPrep:T.el.lPrep,lRun:T.el.lRun,lWarn:T.el.lWarn,lEnd:T.el.lEnd,font:FONTS[0][0],fontText:FONTS[0][0],size:26,showMs:false,hideCtl:true,fsStart:false,
+barDir:'sl',barH:10,barW:76,barAuto:true,cBar:'#ffb81c',beep:true,vol:60,tickWarn:true,flash:true,
+layout:'control',prog:'bar',light:'off',pulse:true,endFlash:true,abcd:false,snd:'beep',nPrep:0,nRun:1,nEnd:2,voice:false,voiceN:3,wake:true};
+let S={...D};
+try{Object.assign(S,JSON.parse(localStorage.getItem('alTimer2')||'{}'))}catch(e){}
+const $=id=>document.getElementById(id),root=document.documentElement,app=$('app'),keys=Object.keys(D);
+let phase='idle',round=1,endAt=0,remMs=0,paused=false,lastSec=-1,total=1,ctx=null,ctlT=null,wl=null,planKey='';
+FONTS.forEach(f=>['font','fontText'].forEach(id=>{const o=document.createElement('option');o.value=f[0];o.textContent=f[1];$(id).appendChild(o)}));
+const tr=k=>T[S.lang][k];
+function save(){try{localStorage.setItem('alTimer2',JSON.stringify(S))}catch(e){}}
+function sync(){keys.forEach(k=>{const el=$(k);if(!el)return;if(el.type==='checkbox')el.checked=S[k];else el.value=S[k]})}
+function effTheme(){return S.theme==='auto'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):S.theme}
+function applyTheme(){const e=effTheme();
+ if(e!==S.eff){const o=DT[S.eff]||DT.dark;Object.keys(o).forEach(k=>{if(String(S[k]).toLowerCase()===o[k])S[k]=DT[e][k]});S.eff=e;save();sync()}
+ root.dataset.theme=e}
+function i18n(){document.querySelectorAll('[data-i]').forEach(e=>{e.textContent=tr(e.dataset.i)});root.lang=S.lang}
+function style(){applyTheme();i18n();root.style.setProperty('--size',S.size);app.style.setProperty('--bgc',S.cBg);
+ $('label').style.fontFamily=S.fontText;$('round').style.fontFamily=S.fontText;document.body.classList.toggle('hidectl',S.hideCtl);document.body.classList.toggle('lay-display',S.layout==='display')}
+function setS(k,v,doSync){const old=S[k];S[k]=v;
+ if(k==='lang')['lPrep','lRun','lWarn','lEnd'].forEach(x=>{if(S[x]===T[old][x])S[x]=T[v][x]});
+ save();if(doSync||k==='lang'||k==='theme')sync();style();render()}
+function bind(){keys.forEach(k=>{const el=$(k);if(!el)return;
+ el.addEventListener('input',()=>setS(k,el.type==='checkbox'?el.checked:(el.type==='number'||el.type==='range')?(Number(el.value)||0):el.value))})}
+
+function fmt(ms){const s=Math.max(0,ms)/1000,m=Math.floor(s/60),r=Math.floor(s%60);
+ let t=m>0?m+':'+String(r).padStart(2,'0'):String(r);if(S.showMs)t+='.'+Math.floor((s*10)%10);return t}
+function remNow(){return paused?remMs:Math.max(0,endAt-performance.now())}
+function inWarn(){return phase==='run'&&S.warn>0&&remNow()<=S.warn*1000}
+function render(){
+ const rem=phase==='idle'?S.run*1000:remNow(),t=$('time');
+ let c=S.cRun,text=fmt(rem),l=tr('ready'),w=false;
+ if(phase==='prep'){c=S.cPrep;l=S.lPrep}
+ if(phase==='run'){c=inWarn()?S.cWarn:S.cRun;l=inWarn()?S.lWarn:S.lRun}
+ if(phase==='end'){c=S.cEnd;l='';text=S.lEnd;w=true}
+ if(paused)l=tr('paused');
+ root.style.setProperty('--cur',c);$('label').textContent=l;t.textContent=text;
+ t.style.fontFamily=w?S.fontText:S.font;
+ t.classList.toggle('word',w);t.classList.toggle('flash',phase==='end'&&S.flash);
+ const p=phase==='idle'?1:phase==='end'?0:Math.min(1,rem/total),sh=S.barDir[0]==='s',bar=$('bar'),bi=bar.firstElementChild;
+ bar.style.display=S.barH>0&&(S.prog==='bar'||S.prog==='both')?'flex':'none';bar.style.height=S.barH+'px';bar.style.width=S.barW+'%';
+ bar.style.justifyContent=S.barDir==='sc'?'center':(S.barDir==='sr'||S.barDir==='fr')?'flex-end':'flex-start';
+ bi.style.width=((sh?p:1-p)*100)+'%';bi.style.background=S.barAuto?c:S.cBar;
+ $('round').textContent=S.rounds>1&&phase!=='idle'?tr('round')+' '+round+' / '+S.rounds:'';
+ $('bGo').textContent=phase==='idle'?tr('go'):paused?tr('resume'):tr('pause');
+ document.title=(phase==='idle'?'':text+' – ')+'Archery Lab – Timer';
+ extras(c,text,l);
+}
+function beep(f,ms,v=1){if(!S.beep)return;try{ctx=ctx||new (window.AudioContext||window.webkitAudioContext)();
+ const o=ctx.createOscillator(),g=ctx.createGain();o.type='square';o.frequency.value=f;g.gain.value=.25*(S.vol/100)*v;
+ o.connect(g);g.connect(ctx.destination);o.start();g.gain.setTargetAtTime(0,ctx.currentTime+ms/1000-.03,.01);o.stop(ctx.currentTime+ms/1000)}catch(e){}}
+function enter(p){phase=p;lastSec=-1;paused=false;
+ const dur=p==='prep'?S.prep:p==='run'?S.run:S.endHold;
+ total=Math.max(1,dur*1000);endAt=(p==='end'&&S.endHold===0)?Infinity:performance.now()+dur*1000;
+ if(p==='prep')ev(S.nPrep);if(p==='run')ev(S.nRun);if(p==='end')ev(S.nEnd);render()}
+function nextPhase(){
+ if(phase==='prep')return enter('run');
+ if(phase==='run')return enter('end');
+ if(round<S.rounds){round++;return enter(S.prep>0?'prep':'run')}reset()}
+function tick(){
+ if(phase==='idle'||paused)return;
+ const rem=endAt-performance.now();
+ if(rem<=0){nextPhase();return}
+ const sec=Math.ceil(rem/1000);
+ if(sec!==lastSec&&phase!=='end'){lastSec=sec;
+  if(S.voice&&sec<=S.voiceN&&(phase==='prep'||phase==='run'))say(sec);
+  if(phase==='prep'&&sec<=3)beep(800,150);
+  else if(phase==='run'&&S.warn>0&&sec<=S.warn&&S.tickWarn)beep(sec<=3?1000:600,sec<=3?200:90,sec<=3?1:.6)}
+ render()}
+function start(){
+ if(phase==='idle'){if(S.fsStart&&!document.fullscreenElement)fs();
+  try{ctx=ctx||new (window.AudioContext||window.webkitAudioContext)()}catch(e){}
+  round=1;lock();enter(S.prep>0?'prep':'run')}
+ else if(paused){paused=false;endAt=performance.now()+remMs;render()}
+ else if(phase!=='end'){remMs=endAt-performance.now();paused=true;render()}}
+function reset(){unlock();phase='idle';paused=false;round=1;lastSec=-1;render()}
+function fs(){document.fullscreenElement?document.exitFullscreen():(app.requestFullscreen&&app.requestFullscreen().catch(()=>{}))}
+function showCtl(){const b=document.body;if(!document.fullscreenElement)return;b.classList.add('ctlshow');clearTimeout(ctlT);ctlT=setTimeout(()=>b.classList.remove('ctlshow'),2500)}
+document.addEventListener('fullscreenchange',()=>{document.body.classList.toggle('fs',!!document.fullscreenElement);document.activeElement&&document.activeElement.blur();showCtl()});
+['mousemove','pointerdown','touchstart'].forEach(ev=>document.addEventListener(ev,showCtl,{passive:true}));
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(S.theme==='auto'){style();render()}});
+
+$('bGo').onclick=()=>send('go');$('bReset').onclick=()=>send('reset');$('bFs').onclick=fs;$('bM10').onclick=()=>send('m10');$('bP10').onclick=()=>send('p10');$('bRst').onclick=()=>send('rst');
+$('bSet').onclick=()=>$('panel').classList.toggle('open');$('bClose').onclick=()=>$('panel').classList.remove('open');
+$('bLang').onclick=()=>setS('lang',S.lang==='el'?'en':'el',true);
+$('bTheme').onclick=()=>setS('theme',effTheme()==='dark'?'light':'dark',true);
+$('bDef').onclick=()=>{const l=S.lang;S={...D,lang:l,lPrep:T[l].lPrep,lRun:T[l].lRun,lWarn:T[l].lWarn,lEnd:T[l].lEnd};save();sync();style();reset()};
+document.addEventListener('keydown',e=>{
+ if(['INPUT','SELECT'].includes(e.target.tagName)&&e.key!=='Escape')return;
+ if(e.code==='Space'){e.preventDefault();send('go')}
+ else if(e.key==='r'||e.key==='R')send('reset');
+ else if(e.key==='f'||e.key==='F')fs();
+ else if(e.key==='s'||e.key==='S')$('panel').classList.toggle('open');
+ else if(e.key==='Escape')$('panel').classList.remove('open')});
+const PAL={arch:{cPrep:'#cfd8ea',cRun:'#ffb81c',cWarn:'#ff7a1a',cEnd:'#ff3b3b',cBg:'#0b0e12',cBar:'#ffb81c'},
+contrast:{cPrep:'#ffffff',cRun:'#ffff00',cWarn:'#ff9500',cEnd:'#ff2d2d',cBg:'#000000',cBar:'#ffffff'},
+sun:{cPrep:'#0b3d91',cRun:'#006b2d',cWarn:'#b35900',cEnd:'#b00020',cBg:'#ffffff',cBar:'#006b2d'}};
+const SND={beep:['square',1000,300],whistle:['triangle',2700,350],horn:['sawtooth',230,700],bell:['sine',880,900]};
+function tone(type,f,ms){if(!S.beep)return;try{ctx=ctx||new (window.AudioContext||window.webkitAudioContext)();
+ const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.value=f;g.gain.value=.25*(S.vol/100);
+ o.connect(g);g.connect(ctx.destination);o.start();g.gain.setTargetAtTime(0,ctx.currentTime+ms/1000-.03,.01);o.stop(ctx.currentTime+ms/1000)}catch(e){}}
+function ev(n){const d=SND[S.snd]||SND.beep;for(let i=0;i<n;i++)setTimeout(()=>tone(d[0],d[1],d[2]),i*(d[2]+200))}
+function say(n){try{if(!('speechSynthesis' in window)||n<0||n>10)return;
+ const w=S.lang==='el'?['μηδέν','ένα','δύο','τρία','τέσσερα','πέντε','έξι','επτά','οκτώ','εννέα','δέκα']:['zero','one','two','three','four','five','six','seven','eight','nine','ten'];
+ const u=new SpeechSynthesisUtterance(w[n]);u.lang=S.lang==='el'?'el-GR':'en-US';u.volume=S.vol/100;speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}}
+async function lock(){try{if(S.wake&&'wakeLock' in navigator)wl=await navigator.wakeLock.request('screen')}catch(e){}}
+function unlock(){try{wl&&wl.release()}catch(e){}wl=null}
+function adj(ms){if(phase==='idle'||phase==='end')return;if(paused)remMs=Math.max(0,remMs+ms);else endAt+=ms;total=Math.max(total,remNow());lastSec=-1;render()}
+function cmd(c){if(c==='go')start();else if(c==='reset')reset();else if(c==='p10')adj(10000);else if(c==='m10')adj(-10000);else if(c==='rst'&&(phase==='prep'||phase==='run'))enter(phase)}
+function send(c){cmd(c)}
+function extras(c,text,l){
+ const rem=phase==='idle'?S.run*1000:remNow(),inw=inWarn();
+ const tc=phase==='run'?(inw?'y':'g'):'r',tcol={r:'#e53935',y:'#fdd835',g:'#43a047'}[tc];
+ const ln=$('lights');ln.style.display=S.light==='circles'?'flex':'none';
+ [...ln.children].forEach(b=>b.classList.toggle('on',b.classList.contains(tc)));
+ app.style.setProperty('--bgc',S.light==='bg'?`color-mix(in srgb,${tcol} 30%,${S.cBg})`:S.cBg);
+ $('group').textContent=S.abcd&&phase!=='idle'?(round%2?'AB':'CD'):'';
+ $('time').classList.toggle('pulse',S.pulse&&(phase==='prep'||phase==='run')&&!paused&&rem>0&&rem<=10000);
+ app.classList.toggle('endflash',S.endFlash&&phase==='end');
+ const ringOn=S.prog==='ring'||S.prog==='both';document.querySelector('main').classList.toggle('ringmode',ringOn);
+ if(ringOn){const p=phase==='idle'?1:phase==='end'?0:Math.min(1,rem/total),fr=S.barDir[0]==='s'?p:1-p,rp=$('ringp');
+  $('ring').style.color='var(--text)';rp.style.strokeDashoffset=100*(1-fr);rp.style.opacity=fr>0?1:0;
+  rp.setAttribute('stroke',S.barAuto?c:S.cBar);rp.setAttribute('stroke-width',2+S.barH/8)}
+ const items=[['prep',S.prep,S.lPrep],['run',Math.max(0,S.run-S.warn),S.lRun],['warn',Math.min(S.warn,S.run),S.lWarn],['end',S.endHold===0?'∞':S.endHold,S.lEnd]].filter(x=>x[1]>0||x[1]==='∞');
+ const act=phase==='prep'?'prep':phase==='run'?(inw?'warn':'run'):phase==='end'?'end':'',key=JSON.stringify([items,act]);
+ if(key!==planKey){planKey=key;const pl=$('plan');pl.textContent='';items.forEach(x=>{const s=document.createElement('span');s.textContent=x[2]+' '+x[1]+'″';if(x[0]===act)s.className='on';pl.appendChild(s)})}}
+const PRE_SEED={'Training 120″':{prep:10,run:120,warn:30,endHold:5,rounds:1,abcd:false},'Competition 240″':{prep:10,run:240,warn:30,endHold:5,rounds:1,abcd:false},'Series 30″ AB/CD':{prep:10,run:30,warn:10,endHold:3,rounds:2,abcd:true}};
+function preGet(){try{return JSON.parse(localStorage.getItem('alTimerPre')||'null')||{...PRE_SEED}}catch(e){return{...PRE_SEED}}}
+function preSet(o){try{localStorage.setItem('alTimerPre',JSON.stringify(o))}catch(e){}}
+function preFill(sel){const o=preGet(),s=$('preSel');s.textContent='';Object.keys(o).forEach(n=>{const op=document.createElement('option');op.value=op.textContent=n;s.appendChild(op)});if(sel&&o[sel])s.value=sel}
+function extraInit(){
+ $('palette').onchange=e=>{const p=PAL[e.target.value];if(!p)return;Object.assign(S,p);e.target.value='';save();sync();style();render()};
+ preFill();
+ $('preSel').onchange=()=>{$('preName').value=$('preSel').value};
+ $('preSave').onclick=()=>{const n=($('preName').value||$('preSel').value||'').trim();if(!n)return;const o=preGet(),c={...S};['lang','theme','eff'].forEach(k=>delete c[k]);o[n]=c;preSet(o);preFill(n)};
+ $('preLoad').onclick=()=>{const p=preGet()[$('preSel').value];if(!p)return;Object.assign(S,p);save();sync();style();reset()};
+ $('preDel').onclick=()=>{const o=preGet();delete o[$('preSel').value];preSet(o);preFill()};
+ $('preExp').onclick=()=>{try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(preGet(),null,1)],{type:'application/json'}));a.download='archery-timer-presets.json';a.click()}catch(e){}};
+ $('preImp').onclick=()=>$('preFile').click();
+ $('preFile').onchange=e=>{const f=e.target.files[0];if(f)f.text().then(t=>{try{preSet({...preGet(),...JSON.parse(t)});preFill()}catch(x){}})};
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&phase!=='idle')lock()});
+}
+sync();bind();style();extraInit();render();setInterval(tick,50);
+</script>
+</body>
+</html>
